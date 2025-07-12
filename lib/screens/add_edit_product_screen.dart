@@ -33,7 +33,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late String _selectedCategory;
   String? _imagePath;
 
-  // 修改这里：只包含指定的计量单位
   final List<String> _units = [
     '个', '克', '千克', '毫升', '升', '斤', '公斤'
   ];
@@ -45,7 +44,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _quantityController = TextEditingController(text: widget.product?.quantity.toString());
     _totalPriceController = TextEditingController(text: widget.product?.totalPrice.toString());
     _notesController = TextEditingController(text: widget.product?.notes);
-    // 确保 _selectedUnit 在 _units 列表中，否则使用第一个单位
     _selectedUnit = widget.product?.unit != null && _units.contains(widget.product!.unit)
         ? widget.product!.unit
         : _units[0];
@@ -66,9 +64,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  // 修改 _pickImage 方法，增加选择来源的逻辑
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null) {
       final appDir = await getApplicationDocumentsDirectory();
@@ -191,11 +190,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 20),
+              // 修改图片选择按钮区域
               Row(
                 children: [
                   ElevatedButton(
-                    onPressed: _pickImage,
-                    child: const Text('选择图片'),
+                    onPressed: () => _pickImage(ImageSource.camera), // 拍照按钮
+                    child: const Text('拍照'),
+                  ),
+                  const SizedBox(width: 10), // 增加间隔
+                  ElevatedButton(
+                    onPressed: () => _pickImage(ImageSource.gallery), // 从相册选择按钮
+                    child: const Text('从相册选择'),
                   ),
                   if (_imagePath != null) ...[
                     const SizedBox(width: 10),

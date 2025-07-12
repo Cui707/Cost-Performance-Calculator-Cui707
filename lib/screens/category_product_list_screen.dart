@@ -1,19 +1,18 @@
+// lib/screens/category_product_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:costperformanceclaculatorcui707/models/product.dart';
-import 'package:costperformanceclaculatorcui707/screens/add_edit_product_screen.dart';
+import 'package:costperformanceclaculatorcui707/screens/add_edit_product_screen.dart'; // 确保这个导入是正确的
 import 'package:costperformanceclaculatorcui707/services/product_storage.dart';
 import 'dart:io';
 
 class CategoryProductListScreen extends StatefulWidget {
   final String categoryName;
-  // products 初始传递过来，但后续会通过 _refreshProducts 从存储中加载最新
-  final List<Product> products; 
-  final List<String> allCategories; // 用于 AddEditProductScreen
+  final List<String> allCategories; // 传递所有分类，用于编辑产品时选择
 
   const CategoryProductListScreen({
     super.key,
     required this.categoryName,
-    required this.products,
     required this.allCategories,
   });
 
@@ -23,104 +22,81 @@ class CategoryProductListScreen extends StatefulWidget {
 
 class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
   final ProductStorage _productStorage = ProductStorage();
-  List<Product> _currentCategoryProducts = [];
+  List<Product> _allProducts = []; // 存储所有产品
+  List<Product> _currentCategoryProducts = []; // 存储当前分类的产品
 
   @override
   void initState() {
     super.initState();
-    // Initial load: filter products based on the category name
-    // Then immediately refresh to ensure latest data from storage
-    _refreshProducts(); 
+    _refreshProducts();
   }
 
-  // Refresh current category product list by loading latest data from storage
   Future<void> _refreshProducts() async {
-    final allProducts = await _productStorage.loadProducts();
+    _allProducts = await _productStorage.loadProducts();
     setState(() {
-      _currentCategoryProducts = allProducts.where((p) => p.category == widget.categoryName).toList();
-      _sortAndHighlightProducts(); // Re-sort and highlight
+      _currentCategoryProducts = _allProducts
+          .where((product) => product.category == widget.categoryName)
+          .toList();
+      _sortAndHighlightProducts();
     });
   }
 
-  // Sort products by price-per-unit and identify best/worst value
   void _sortAndHighlightProducts() {
     _currentCategoryProducts.sort((a, b) => a.pricePerUnit.compareTo(b.pricePerUnit));
   }
 
-void _navigateToAddEditProductScreen({Product? product}) async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AddEditProductScreen(
-        product: product,
-        categories: widget.allCategories, // 传递所有分类
-        defaultCategory: widget.categoryName, // 新产品默认选中当前分类
+  void _navigateToAddEditProductScreen({Product? product}) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddEditProductScreen( // 错误信息指向的这一行
+          product: product,
+          categories: widget.allCategories, // 传递所有分类
+          defaultCategory: widget.categoryName, // 新产品默认选中当前分类
+        ),
       ),
-    ),
-  );
+    );
 
-  if (result != null && result is Product) {
-    // 从 AddEditProductScreen 返回后，重新加载并保存所有产品数据
-    // 这里的逻辑已经处理了final属性的问题：我们不会修改旧产品的final属性，
-    // 而是通过创建新产品或替换旧产品的方式来更新列表。
-    final allProducts = await _productStorage.loadProducts();
-    
-    if (product == null) { // 如果是添加新产品
-      allProducts.add(result);
-    } else { // 如果是编辑现有产品
-      // 找到要编辑的旧产品在 allProducts 中的索引
-      final index = allProducts.indexWhere((p) => p.id == result.id);
-      if (index != -1) {
-        // 直接替换旧产品为从编辑界面返回的新产品对象
-        // 新产品对象 (result) 包含了所有最新的属性，包括可能的分类修改
-        allProducts[index] = result;
+    if (result != null && result is Product) {
+      final allProducts = await _productStorage.loadProducts();
+
+      if (product == null) {
+        allProducts.add(result);
       } else {
-        // 这通常不应该发生，除非编辑了一个不存在的产品，但为了健壮性可以加上
-        allProducts.add(result); 
+        final index = allProducts.indexWhere((p) => p.id == result.id);
+        if (index != -1) {
+          allProducts[index] = result;
+        } else {
+          allProducts.add(result);
+        }
       }
-    }
-    
-    await _productStorage.saveProducts(allProducts); // 保存所有产品
-    await _refreshProducts(); // 刷新当前分类的产品列表显示
-  }
-}
 
-  // Show delete product dialog
+      await _productStorage.saveProducts(allProducts);
+      await _refreshProducts();
+    }
+  }
+
   void _showDeleteProductDialog(Product product) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('删除产品'),
-          content: Text('您确定要删除产品 "${product.name}" 吗？'),
+          content: Text('确定要删除产品 "${product.name}" 吗？'),
           actions: <Widget>[
             TextButton(
               child: const Text('取消'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.black,
-              ),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.black,
-              ),
+            TextButton(
               child: const Text('删除'),
               onPressed: () async {
-                // Remove from the current category list (for UI update)
-                setState(() {
-                  _currentCategoryProducts.removeWhere((p) => p.id == product.id);
-                });
-                
-                // Remove from all products and save to storage
-                final allProducts = await _productStorage.loadProducts();
-                allProducts.removeWhere((p) => p.id == product.id);
-                await _productStorage.saveProducts(allProducts);
-                
-                Navigator.of(context).pop();
+                _allProducts.removeWhere((p) => p.id == product.id);
+                await _productStorage.saveProducts(_allProducts);
+                await _refreshProducts();
+                if (mounted) Navigator.of(context).pop();
               },
             ),
           ],
@@ -129,7 +105,6 @@ void _navigateToAddEditProductScreen({Product? product}) async {
     );
   }
 
-  // Show product bottom sheet menu (for Android/iOS)
   void _showProductBottomSheetMenu(BuildContext context, Product product) {
     showModalBottomSheet(
       context: context,
@@ -139,17 +114,17 @@ void _navigateToAddEditProductScreen({Product? product}) async {
             children: <Widget>[
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('编辑产品'),
+                title: const Text('编辑'),
                 onTap: () {
-                  Navigator.pop(bc);
+                  Navigator.pop(context);
                   _navigateToAddEditProductScreen(product: product);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.delete),
-                title: const Text('删除产品'),
+                title: const Text('删除'),
                 onTap: () {
-                  Navigator.pop(bc);
+                  Navigator.pop(context);
                   _showDeleteProductDialog(product);
                 },
               ),
@@ -160,44 +135,69 @@ void _navigateToAddEditProductScreen({Product? product}) async {
     );
   }
 
-  // Show Windows platform right-click context menu
-  void _showWindowsContextMenu(BuildContext context, Product product, Offset tapPosition) {
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromLTRB(
-      tapPosition.dx,
-      tapPosition.dy,
-      overlay.size.width - tapPosition.dx,
-      overlay.size.height - tapPosition.dy,
-    );
-
-    showMenu<String>(
+  void _showWindowsContextMenu(BuildContext context, Product product, Offset position) {
+    showMenu(
       context: context,
-      position: position,
-      items: <PopupMenuEntry<String>>[
-        const PopupMenuItem<String>(
+      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx + 1, position.dy + 1),
+      items: <PopupMenuEntry>[
+        PopupMenuItem(
           value: 'edit',
-          child: ListTile(
-            leading: Icon(Icons.edit),
-            title: Text('编辑产品'),
-          ),
+          child: const Text('编辑'),
+          onTap: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _navigateToAddEditProductScreen(product: product);
+            });
+          },
         ),
-        const PopupMenuItem<String>(
+        PopupMenuItem(
           value: 'delete',
-          child: ListTile(
-            leading: Icon(Icons.delete),
-            title: Text('删除产品'),
-          ),
+          child: const Text('删除'),
+          onTap: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showDeleteProductDialog(product);
+            });
+          },
         ),
       ],
-    ).then((String? value) {
-      if (value == null) return;
+    );
+  }
 
-      if (value == 'edit') {
-        _navigateToAddEditProductScreen(product: product);
-      } else if (value == 'delete') {
-        _showDeleteProductDialog(product);
+  Future<void> _deleteAllProductsInCategory() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('删除所有商品'),
+          content: Text('确定要删除 "${widget.categoryName}" 分类下的所有商品吗？此操作不可撤销。'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('取消'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: const Text('删除'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      _allProducts.removeWhere((product) => product.category == widget.categoryName);
+      await _productStorage.saveProducts(_allProducts);
+      await _refreshProducts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已删除 "${widget.categoryName}" 分类下的所有商品')),
+        );
       }
-    });
+    }
   }
 
   @override
@@ -212,7 +212,14 @@ void _navigateToAddEditProductScreen({Product? product}) async {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.categoryName} - 产品列表'), // AppBar title shows current category
+        title: Text('${widget.categoryName} - 产品列表'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: '删除所有商品',
+            onPressed: _deleteAllProductsInCategory,
+          ),
+        ],
       ),
       body: _currentCategoryProducts.isEmpty
           ? Center(
@@ -242,18 +249,17 @@ void _navigateToAddEditProductScreen({Product? product}) async {
                         _showProductBottomSheetMenu(context, product);
                       }
                     },
-                    child: InkWell( // Use InkWell for tap effect
+                    child: InkWell(
                       onTap: () {
                         _navigateToAddEditProductScreen(product: product);
                       },
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0), // Add some internal padding
+                        padding: const EdgeInsets.all(8.0),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start, // Align content to the top
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Column 1: Total Price and Quantity/Unit
                             Expanded(
-                              flex: 2, // Relative width
+                              flex: 2,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -268,7 +274,6 @@ void _navigateToAddEditProductScreen({Product? product}) async {
                                 ],
                               ),
                             ),
-                            // Column 2: Product Name and Price-Per-Unit (性价比)
                             Expanded(
                               flex: 3,
                               child: Column(
@@ -277,8 +282,8 @@ void _navigateToAddEditProductScreen({Product? product}) async {
                                   Text(
                                     product.name,
                                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                    maxLines: 2, // Max two lines for long names
-                                    overflow: TextOverflow.ellipsis, // Ellipsis for overflow
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     '性价比: ¥${product.pricePerUnit.toStringAsFixed(2)} / ${product.unit}',
@@ -287,26 +292,24 @@ void _navigateToAddEditProductScreen({Product? product}) async {
                                 ],
                               ),
                             ),
-                            // Column 3: Notes
                             Expanded(
                               flex: 2,
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 8.0), // Left margin for separation
+                                padding: const EdgeInsets.only(left: 8.0),
                                 child: Text(
                                   product.notes != null && product.notes!.isNotEmpty
                                       ? '备注: ${product.notes!}'
                                       : '无备注',
                                   style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
-                                  maxLines: 3, // Max three lines for notes
+                                  maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
-                            // Column 4: Image
                             if (product.imagePath != null && File(product.imagePath!).existsSync())
                               SizedBox(
-                                width: 70, // Fixed width for image
-                                height: 70, // Fixed height for image
+                                width: 70,
+                                height: 70,
                                 child: Image.file(
                                   File(product.imagePath!),
                                   fit: BoxFit.cover,
@@ -316,7 +319,7 @@ void _navigateToAddEditProductScreen({Product? product}) async {
                                 ),
                               )
                             else
-                              const SizedBox( // Placeholder if no image exists
+                              const SizedBox(
                                 width: 70,
                                 height: 70,
                                 child: Center(
@@ -333,7 +336,7 @@ void _navigateToAddEditProductScreen({Product? product}) async {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _navigateToAddEditProductScreen(); // Add new product to current category
+          _navigateToAddEditProductScreen();
         },
         child: const Icon(Icons.add),
       ),

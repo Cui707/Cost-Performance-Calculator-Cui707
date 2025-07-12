@@ -302,13 +302,12 @@ void _showEditCategoryDialog(String oldCategoryName) {
                     onTap: () async {
                       // 导航到 CategoryProductListScreen，显示该分类下的产品
                       final productsInCategory = _products.where((p) => p.category == category).toList();
-                      await Navigator.push(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (ctx) => CategoryProductListScreen(
+                          builder: (context) => CategoryProductListScreen(
                             categoryName: category,
-                            products: productsInCategory,
-                            allCategories: _categories, // 传递所有分类给产品编辑页
+                            allCategories: _categories, // 保持传递所有分类
                           ),
                         ),
                       );
