@@ -1,0 +1,2 @@
+# Cost-Performance-Calculator-Cui707
+性价比计算器-记录多个产品信息，自动计算性价比并排序，高亮显示最高最低性价比。
