@@ -42,12 +42,32 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
       _sortAndHighlightProducts();
       // Reset random selection when products are refreshed, unless it's the same product.
       // For simplicity, we'll clear it for now to avoid stale highlighting.
-      _randomlySelectedProductId = null; 
+      _randomlySelectedProductId = null;
     });
   }
 
   void _sortAndHighlightProducts() {
     _currentCategoryProducts.sort((a, b) => a.pricePerUnit.compareTo(b.pricePerUnit));
+  }
+
+  // 定义 _getTextColor 方法
+  Color _getTextColor(Product product) {
+    if (_currentCategoryProducts.isEmpty) {
+      return Colors.black; // Default color if no products
+    }
+
+    // 在这里重新计算 bestValueProduct 和 worstValueProduct
+    // 确保它们是基于当前的 _currentCategoryProducts 列表
+    Product bestValueProduct = _currentCategoryProducts.reduce((a, b) => a.pricePerUnit < b.pricePerUnit ? a : b);
+    Product worstValueProduct = _currentCategoryProducts.reduce((a, b) => a.pricePerUnit > b.pricePerUnit ? a : b);
+
+
+    if (product.id == bestValueProduct.id) {
+      return Colors.green; // 性价比最好的产品显示绿色
+    } else if (product.id == worstValueProduct.id) {
+      return Colors.red; // 性价比最差的产品显示红色
+    }
+    return Colors.black; // 其他产品显示黑色
   }
 
   void _navigateToAddEditProductScreen({Product? product}) async {
@@ -220,12 +240,12 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
 
     setState(() {
       _randomlySelectedProductId = selectedProduct.id;
-      
+
       // Remove the selected product from its current position
       _currentCategoryProducts.removeAt(randomIndex);
       // Insert it at the beginning of the list
       _currentCategoryProducts.insert(0, selectedProduct);
-      
+
       // Optionally re-sort the rest of the list, but the request only says "置顶"
       // If full re-sorting of the remaining items is desired:
       // List<Product> sortedRemaining = _currentCategoryProducts.sublist(1);
@@ -274,7 +294,7 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
                     itemBuilder: (context, index) {
                       final product = _currentCategoryProducts[index];
                       Color? cardColor;
-                      
+
                       // Determine base color (best/worst value)
                       if (bestValueProduct != null && product.id == bestValueProduct.id) {
                         cardColor = Colors.green.shade100;
@@ -317,13 +337,23 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          '总价: ¥${product.totalPrice.toStringAsFixed(2)}',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        // 总价：用 FittedBox 包裹，并设置 maxLines: 1
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            '总价: ¥${product.totalPrice.toStringAsFixed(2)}',
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                            maxLines: 1,
+                                          ),
                                         ),
-                                        Text(
-                                          '数量: ${product.quantity} ${product.unit}',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        // 数量：用 FittedBox 包裹，并设置 maxLines: 1
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            '数量: ${product.quantity} ${product.unit}',
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                            maxLines: 1,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -333,15 +363,27 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          product.name,
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                        // 产品名称：用 FittedBox 包裹，并设置 maxLines: 1
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            product.name,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                            maxLines: 1, // 告知 FittedBox 尝试保持单行
+                                          ),
                                         ),
-                                        Text(
-                                          '性价比: ¥${product.pricePerUnit.toStringAsFixed(2)} / ${product.unit}',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        // 性价比：用 FittedBox 包裹，并设置 maxLines: 1
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            '性价比: ¥${product.pricePerUnit.toStringAsFixed(2)} / ${product.unit}',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: _getTextColor(product), // 调用已定义的 _getTextColor 方法
+                                            ),
+                                            maxLines: 1, // 告知 FittedBox 尝试保持单行
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -355,8 +397,7 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
                                             ? '备注: ${product.notes!}'
                                             : '无备注',
                                         style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
+                                        // 备注：这里不添加 maxLines 和 overflow，按您要求不对备注进行优化
                                       ),
                                     ),
                                   ),
@@ -391,7 +432,7 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
           ),
           // New: "选择困难-随机" button at the bottom
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 48.0), // 底部边距增大到48.0
             child: ElevatedButton(
               onPressed: _selectRandomProduct,
               style: ElevatedButton.styleFrom(

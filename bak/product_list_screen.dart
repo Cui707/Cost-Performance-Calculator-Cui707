@@ -298,22 +298,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           },
                           trailing: category != '未分类'
                               ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
-                                        onPressed: () {
-                                          _showEditCategoryDialog(category);
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, size: 20),
-                                        onPressed: () {
-                                          _showDeleteCategoryDialog(category);
-                                        },
-                                      ),
-                                    ],
-                                  )
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, size: 20),
+                                      onPressed: () {
+                                        _showEditCategoryDialog(category);
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, size: 20),
+                                      onPressed: () {
+                                        _showDeleteCategoryDialog(category);
+                                      },
+                                    ),
+                                  ],
+                                )
                               : null,
                         );
                       } else {
@@ -329,7 +329,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           // 添加底部开发者信息
           Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 16.0, top: 8.0), // 增加底部安全区域的边距
+            padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
             child: Column(
               children: const [
                 Text(
