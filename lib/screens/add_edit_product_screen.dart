@@ -199,8 +199,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   ),
                   const SizedBox(width: 10), // 增加间隔
                   ElevatedButton(
-                    onPressed: () => _pickImage(ImageSource.gallery), // 从相册选择按钮
-                    child: const Text('从相册选择'),
+                    onPressed: () => _pickImage(ImageSource.gallery), 
+                    child: const Text('选择图片'),
                   ),
                   if (_imagePath != null) ...[
                     const SizedBox(width: 10),

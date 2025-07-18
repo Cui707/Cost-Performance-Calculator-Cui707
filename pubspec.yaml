@@ -1,5 +1,5 @@
 name: costperformanceclaculatorcui707
-description: "A new Flutter project."
+description: "costperformanceclaculatorcui707"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -43,6 +43,7 @@ dev_dependencies:
   path_provider: ^2.1.0      # 用于获取文件路径
   path: ^1.9.0               # 用于路径操作
   uuid: ^4.4.0
+  flutter_launcher_icons: "^0.13.1"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -61,6 +62,15 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true        # 为 Android 平台生成图标
+  ios: false           # 如果不需要 iOS 图标可以设置为 false
+  image_path: "assets/logo.png" # 替换为你的图标路径
+  windows:
+    generate: true     # 为 Windows 平台生成图标
+    image_path: "assets/logo.png" # 替换为你的图标路径
+    icon_size: 48      # 可选：Windows 图标的尺寸，通常保持默认或根据需要调整
 
   # To add assets to your application, add an assets section, like this:
   # assets:

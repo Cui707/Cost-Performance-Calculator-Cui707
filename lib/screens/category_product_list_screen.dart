@@ -214,11 +214,15 @@ class _CategoryProductListScreenState extends State<CategoryProductListScreen> {
       appBar: AppBar(
         title: Text('${widget.categoryName} - 产品列表'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: '删除所有商品',
+          ElevatedButton(
             onPressed: _deleteAllProductsInCategory,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,       // 设置背景颜色为红色
+              foregroundColor: Colors.black,     // 设置文本颜色为黑色
+            ),
+            child: const Text('删除所有商品'),
           ),
+          const SizedBox(width: 8), // 可选：添加一些间距
         ],
       ),
       body: _currentCategoryProducts.isEmpty

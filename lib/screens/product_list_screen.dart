@@ -20,8 +20,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   final ProductStorage _productStorage = ProductStorage();
   List<Product> _products = [];
   List<String> _categories = [];
-  // _currentCategory 在这个屏幕上不再用于直接过滤显示产品，
-  // 而是作为 AddEditProductScreen 的默认分类传入，或者旧代码的遗留
   String _currentCategory = '未分类'; 
   
   TextEditingController _searchController = TextEditingController(); // 用于分类搜索的控制器
@@ -31,7 +29,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // 监听搜索框文本变化，实时过滤分类
     _searchController.addListener(_filterCategories); 
   }
 
@@ -112,7 +109,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 if (newCategoryName.isNotEmpty && !_categories.contains(newCategoryName)) {
                   setState(() {
                     _categories.add(newCategoryName);
-                    // 添加新分类后也要更新过滤后的列表，否则搜索框需要清空或输入才能显示新分类
                     _filterCategories(); 
                   });
                   _saveCategories();
@@ -127,80 +123,72 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   // 编辑分类的对话框
-void _showEditCategoryDialog(String oldCategoryName) {
-  String newCategoryName = oldCategoryName;
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('编辑分类'),
-        content: TextField(
-          autofocus: true,
-          controller: TextEditingController(text: oldCategoryName),
-          onChanged: (value) {
-            newCategoryName = value;
-          },
-          decoration: const InputDecoration(hintText: '输入新分类名称'),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('取消'),
-            onPressed: () {
-              Navigator.of(context).pop();
+  void _showEditCategoryDialog(String oldCategoryName) {
+    String newCategoryName = oldCategoryName;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('编辑分类'),
+          content: TextField(
+            autofocus: true,
+            controller: TextEditingController(text: oldCategoryName),
+            onChanged: (value) {
+              newCategoryName = value;
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.black),
+            decoration: const InputDecoration(hintText: '输入新分类名称'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
-            child: const Text('保存'),
-            onPressed: () {
-              if (newCategoryName.isNotEmpty && newCategoryName != oldCategoryName && !_categories.contains(newCategoryName)) {
-                setState(() {
-                  final index = _categories.indexOf(oldCategoryName);
-                  if (index != -1) {
-                    _categories[index] = newCategoryName;
-                    // --- 修改从这里开始 ---
-                    // 创建一个临时列表来存放更新后的产品，因为不能直接修改_products迭代
-                    List<Product> updatedProducts = [];
-                    for (var product in _products) {
-                      if (product.category == oldCategoryName) {
-                        // 创建一个新的 Product 实例，并更新其 category 属性
-                        updatedProducts.add(
-                          Product(
-                            id: product.id,
-                            name: product.name,
-                            quantity: product.quantity,
-                            unit: product.unit,
-                            totalPrice: product.totalPrice,
-                            category: newCategoryName, // 这里是更新分类
-                            notes: product.notes,
-                            imagePath: product.imagePath,
-                          ),
-                        );
-                      } else {
-                        // 对于分类没有改变的产品，直接添加回列表
-                        updatedProducts.add(product);
+          actions: <Widget>[
+            TextButton(
+              child: const Text('取消'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.black),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+              child: const Text('保存'),
+              onPressed: () {
+                if (newCategoryName.isNotEmpty && newCategoryName != oldCategoryName && !_categories.contains(newCategoryName)) {
+                  setState(() {
+                    final index = _categories.indexOf(oldCategoryName);
+                    if (index != -1) {
+                      _categories[index] = newCategoryName;
+                      List<Product> updatedProducts = [];
+                      for (var product in _products) {
+                        if (product.category == oldCategoryName) {
+                          updatedProducts.add(
+                            Product(
+                              id: product.id,
+                              name: product.name,
+                              quantity: product.quantity,
+                              unit: product.unit,
+                              totalPrice: product.totalPrice,
+                              category: newCategoryName,
+                              notes: product.notes,
+                              imagePath: product.imagePath,
+                            ),
+                          );
+                        } else {
+                          updatedProducts.add(product);
+                        }
                       }
+                      _products = updatedProducts;
+                      _filterCategories();
                     }
-                    // 用更新后的产品列表替换旧的 _products 列表
-                    _products = updatedProducts;
-                    // --- 修改到这里结束 ---
-
-                    // 更新过滤后的列表
-                    _filterCategories(); // 这会重新过滤 _products
-                  }
-                });
-                _saveCategories();
-                _saveProducts(); // 确保保存更新后的产品列表
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+                  });
+                  _saveCategories();
+                  _saveProducts();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // 删除分类的对话框
   void _showDeleteCategoryDialog(String categoryToDelete) {
@@ -230,10 +218,7 @@ void _showEditCategoryDialog(String oldCategoryName) {
                 setState(() {
                   _categories.remove(categoryToDelete);
                   _products.removeWhere((p) => p.category == categoryToDelete);
-
-                  // 删除后更新过滤列表
                   _filterCategories();
-                  // 刷新数据以确保 CategoryProductListScreen 返回时也能看到最新数据
                   _loadData(); 
                 });
                 _saveCategories();
@@ -251,8 +236,8 @@ void _showEditCategoryDialog(String oldCategoryName) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('分类管理'), // AppBar 标题改为“分类管理”
-        // 在 AppBar 底部添加搜索框
+        title: const Text('性价比计算器'), 
+        centerTitle: true, // 将标题居中
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight + 8.0), // 留出一点边距
           child: Padding(
@@ -281,71 +266,106 @@ void _showEditCategoryDialog(String oldCategoryName) {
             ),
           ),
         ),
-        // 移除排序和筛选动作按钮
-        actions: [], 
+        actions: [], // 移除了分类管理按钮
       ),
-      // 移除 Drawer，因为它现在的主体内容就是分类列表
-      // drawer: Drawer(...), // 完全删除这个 Drawer 部分
-
-      body: _filteredCategories.isEmpty && _searchController.text.isNotEmpty
-          ? const Center(
-              child: Text('没有找到匹配的分类。'),
-            )
-          : ListView.builder(
-              itemCount: _filteredCategories.length + 1, // +1 是为了“添加新分类”按钮
-              itemBuilder: (context, index) {
-                if (index < _filteredCategories.length) {
-                  final category = _filteredCategories[index];
-                  return ListTile(
-                    leading: const Icon(Icons.folder_open),
-                    title: Text(category),
-                    onTap: () async {
-                      // 导航到 CategoryProductListScreen，显示该分类下的产品
-                      final productsInCategory = _products.where((p) => p.category == category).toList();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryProductListScreen(
-                            categoryName: category,
-                            allCategories: _categories, // 保持传递所有分类
-                          ),
-                        ),
-                      );
-                      // 从产品列表页返回时，重新加载数据以更新分类列表（如分类被删除，或产品数量变化等）
-                      _loadData();
+      body: Column( // 使用 Column 包装整个 body 内容
+        children: [
+          Expanded( // 使分类列表占用可用空间
+            child: _filteredCategories.isEmpty && _searchController.text.isNotEmpty
+                ? const Center(
+                    child: Text('没有找到匹配的分类。'),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredCategories.length + 1, // +1 是为了“添加新分类”按钮
+                    itemBuilder: (context, index) {
+                      if (index < _filteredCategories.length) {
+                        final category = _filteredCategories[index];
+                        return ListTile(
+                          leading: const Icon(Icons.folder_open),
+                          title: Text(category),
+                          onTap: () async {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CategoryProductListScreen(
+                                  categoryName: category,
+                                  allCategories: _categories, // 保持传递所有分类
+                                ),
+                              ),
+                            );
+                            // 从产品列表页返回时，重新加载数据以更新分类列表（如分类被删除，或产品数量变化等）
+                            _loadData();
+                          },
+                          trailing: category != '未分类'
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, size: 20),
+                                      onPressed: () {
+                                        _showEditCategoryDialog(category);
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, size: 20),
+                                      onPressed: () {
+                                        _showDeleteCategoryDialog(category);
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : null,
+                        );
+                      } else {
+                        // 列表的最后一个条目用于添加新分类
+                        return ListTile(
+                          leading: const Icon(Icons.add),
+                          title: const Text('添加新分类'),
+                          onTap: _showAddCategoryDialog,
+                        );
+                      }
                     },
-                    trailing: category != '未分类' // "未分类"不允许编辑或删除
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, size: 20),
-                                onPressed: () {
-                                  _showEditCategoryDialog(category);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, size: 20),
-                                onPressed: () {
-                                  _showDeleteCategoryDialog(category);
-                                },
-                              ),
-                            ],
-                          )
-                        : null,
-                  );
-                } else {
-                  // 列表的最后一个条目用于添加新分类
-                  return ListTile(
-                    leading: const Icon(Icons.add),
-                    title: const Text('添加新分类'),
-                    onTap: _showAddCategoryDialog,
-                  );
-                }
-              },
+                  ),
+          ),
+          // 添加底部开发者信息
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+            child: Column(
+              children: const [
+                Text(
+                  '开发者-Cui707',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                Text(
+                  'Email-cui19991999@126.com',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
             ),
-      // 移除浮动动作按钮 (FAB)，因为添加产品现在在 CategoryProductListScreen 中完成
-      floatingActionButton: null, 
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final newProduct = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddEditProductScreen(
+                categories: _categories, // 传递所有分类
+              ),
+            ),
+          );
+          if (newProduct != null && newProduct is Product) {
+            setState(() {
+              _products.add(newProduct);
+              // 添加新产品后需要重新加载数据，以确保分类列表正确更新（如果新产品创建了新分类）
+              _loadData(); 
+            });
+            await _productStorage.saveProducts(_products);
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
